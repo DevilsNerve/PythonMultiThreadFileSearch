@@ -62,10 +62,12 @@ class FileSearcherThread(threading.Thread):
         self.results = []
         self.searched = []
         self.cancelled = False
+        self.futures = []  # New
 
     def run(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
             future_to_file = {executor.submit(search_file, file, self.search_text, self.file_extension): file for file in self.files}
+            self.futures.extend(future_to_file.keys())  # Keep track of futures
             for future in concurrent.futures.as_completed(future_to_file):
                 if self.cancelled:
                     return
@@ -79,7 +81,8 @@ class FileSearcherThread(threading.Thread):
 
     def cancel_search(self):
         self.cancelled = True
-
+        for future in self.futures:  # Cancel all futures
+            future.cancel()
 
 class App:
     def __init__(self, root):
@@ -111,11 +114,17 @@ class App:
         self.results.pack(fill='both', expand=True)
         self.results.bind('<<ListboxSelect>>', self.copy_to_clipboard)
 
+        self.clear_results_button = tk.Button(self.root, text="Clear Search Results", command=self.clear_search_results)
+        self.clear_results_button.pack(fill='x')
+
         self.label_searched = tk.Label(self.root, text="Searched files:")
         self.label_searched.pack(fill='x')
 
         self.searched = tk.Listbox(self.root)
         self.searched.pack(fill='both', expand=True)
+
+        self.clear_searched_button = tk.Button(self.root, text="Clear Searched Files", command=self.clear_searched_files)
+        self.clear_searched_button.pack(fill='x')
 
         self.label_queue = tk.Label(self.root, text="Search queue:")
         self.label_queue.pack(fill='x')
@@ -138,6 +147,7 @@ class App:
         if self.search_queue.is_searching():
             self.search_queue.cancel_current_search()
             self.button.configure(text="Search")
+            self.queue.delete(0)
         else:
             directory = filedialog.askdirectory()
             search_text = self.search_text.get()
@@ -171,7 +181,7 @@ class App:
                 self.root.after(100, self.check_thread, searcher)
             else:
                 self.button.configure(text="Search")
-                messagebox.showinfo("Search Complete", "The file search has been completed.")
+                messagebox.showinfo("Results so fast you'll freak ... Search Complete", "The file search has been completed.")
 
     def move_up_in_queue(self):
         selected = self.queue.curselection()
@@ -205,7 +215,10 @@ class App:
         if selection:
             selected = event.widget.get(selection)
             self.root.clipboard_append(selected)
-
+    def clear_search_results(self):
+        self.results.delete(0, tk.END)
+    def clear_searched_files(self):
+        self.searched.delete(0, tk.END)
 
 root = tk.Tk()
 app = App(root)
