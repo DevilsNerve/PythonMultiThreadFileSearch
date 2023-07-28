@@ -2,7 +2,7 @@
 
 This is a highly efficient, multi-threaded file searching application that uses Python's built-in `tkinter` library for its user interface. The program quickly searches the specified directories for files containing the entered search text. It also allows the user to specify a specific file extension to narrow the search results. The user can view the searched files, found files, and manage search queries in a queue. 
 
-![App Screenshot](/images/screenshot.png)
+![App Screenshot](screenshot.png)
 
 ## Features
 
